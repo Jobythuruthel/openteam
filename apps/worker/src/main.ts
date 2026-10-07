@@ -3,6 +3,9 @@ import { Redis } from 'ioredis';
 import pino from 'pino';
 import { EnvValidationError, loadWorkerEnv } from '@openteam/config';
 import { createPrismaClient } from '@openteam/database';
+import { EMAIL_QUEUE } from '@openteam/email';
+import { createEmailProvider } from './email-provider';
+import { createEmailProcessor } from './processors/email.processor';
 import { createSystemProcessor } from './processors/system.processor';
 import { HEARTBEAT_INTERVAL_MS, QUEUES, SYSTEM_JOBS } from './queues';
 
@@ -46,7 +49,27 @@ async function main(): Promise<void> {
     logger.error({ err: error, jobId: job?.id, queue: QUEUES.system }, 'Job failed'),
   );
 
-  logger.info({ queues: Object.values(QUEUES) }, 'Worker started');
+  const emailProvider = createEmailProvider(env);
+  const emailWorker = new Worker(
+    EMAIL_QUEUE,
+    createEmailProcessor({ provider: emailProvider, logger }),
+    {
+      connection,
+      concurrency: env.WORKER_CONCURRENCY,
+    },
+  );
+  emailWorker.on('failed', (job, error) =>
+    // The error message from SMTP never includes the message body, so it is safe to log.
+    logger.error(
+      { err: error, jobId: job?.id, queue: EMAIL_QUEUE, attempts: job?.attemptsMade },
+      'Email job failed',
+    ),
+  );
+
+  logger.info(
+    { queues: [...Object.values(QUEUES), EMAIL_QUEUE], emailProvider: emailProvider.name },
+    'Worker started',
+  );
 
   let shuttingDown = false;
   const shutdown = async (signal: string) => {
@@ -55,6 +78,8 @@ async function main(): Promise<void> {
     logger.info({ signal }, 'Worker shutting down');
     // Let in-flight jobs finish before closing connections.
     await systemWorker.close();
+    await emailWorker.close();
+    await emailProvider.close?.();
     await systemQueue.close();
     await prisma.$disconnect();
     connection.disconnect();

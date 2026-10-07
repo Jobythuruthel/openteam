@@ -1,6 +1,14 @@
 import { PrismaClient } from '@prisma/client';
 
 export { Prisma, PrismaClient } from '@prisma/client';
+export type {
+  EmailVerificationToken,
+  PasswordResetToken,
+  Session,
+  SessionRevocationReason,
+  User,
+  UserStatus,
+} from '@prisma/client';
 
 export interface CreatePrismaClientOptions {
   databaseUrl: string;

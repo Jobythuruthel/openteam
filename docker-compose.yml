@@ -35,6 +35,14 @@ services:
       timeout: 3s
       retries: 10
 
+  # Development mail catcher. Every email the worker sends lands here: http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:v1.31
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:1025:1025'
+      - '127.0.0.1:8025:8025'
+
   migrate:
     profiles: ['app']
     build:
@@ -90,6 +98,7 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-openteam}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-openteam}
       REDIS_URL: redis://redis:6379
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
     depends_on:
       migrate:
         condition: service_completed_successfully

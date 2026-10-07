@@ -7,7 +7,8 @@ RUN corepack enable && apk add --no-cache openssl
 WORKDIR /repo
 COPY . .
 RUN pnpm install --frozen-lockfile
-RUN pnpm --filter @openteam/config --filter @openteam/database --filter @openteam/api --filter @openteam/worker run build
+# The trailing "..." builds each app together with the workspace packages it depends on.
+RUN pnpm --filter "@openteam/api..." --filter "@openteam/worker..." run build
 
 FROM node:22-alpine AS runtime
 RUN apk add --no-cache openssl tini

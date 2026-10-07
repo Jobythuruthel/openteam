@@ -8,7 +8,7 @@ RUN corepack enable
 WORKDIR /repo
 COPY . .
 RUN pnpm install --frozen-lockfile
-RUN pnpm --filter @openteam/${APP} run build
+RUN pnpm --filter "@openteam/${APP}..." run build
 
 FROM node:22-alpine AS runtime
 ARG APP
