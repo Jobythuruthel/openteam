@@ -14,7 +14,7 @@ datasource db {
   extensions = [citext, pgcrypto]
 }
 
-// Domain models arrive with their feature runs (authentication is next).
+// Domain models arrive with their feature runs.
 // This placeholder model exists only because Prisma requires at least one model to generate a client;
 // it maps to a real table holding the schema metadata used by readiness checks.
 model SystemInfo {
@@ -23,4 +23,88 @@ model SystemInfo {
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("system_info")
+}
+
+enum UserStatus {
+  PENDING_VERIFICATION @map("pending_verification")
+  ACTIVE               @map("active")
+  DISABLED             @map("disabled")
+
+  @@map("user_status")
+}
+
+enum SessionRevocationReason {
+  LOGOUT         @map("logout")
+  LOGOUT_ALL     @map("logout_all")
+  USER_REVOKED   @map("user_revoked")
+  PASSWORD_RESET @map("password_reset")
+  ROTATED        @map("rotated")
+
+  @@map("session_revocation_reason")
+}
+
+model User {
+  id                String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Stored normalised (trimmed, lowercased). citext keeps uniqueness case-insensitive regardless.
+  email             String     @unique @db.Citext
+  /// Argon2id PHC string. Never returned by any API.
+  passwordHash      String     @map("password_hash") @db.Text
+  status            UserStatus @default(PENDING_VERIFICATION)
+  emailVerifiedAt   DateTime?  @map("email_verified_at") @db.Timestamptz(3)
+  passwordChangedAt DateTime   @default(now()) @map("password_changed_at") @db.Timestamptz(3)
+  createdAt         DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  sessions                Session[]
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens     PasswordResetToken[]
+
+  @@map("users")
+}
+
+model Session {
+  id            String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String                   @map("user_id") @db.Uuid
+  /// SHA-256 of the cookie token. The raw token only ever exists in the browser cookie.
+  tokenHash     String                   @unique @map("token_hash") @db.Char(64)
+  /// Coarse label such as "Firefox on Linux". The full user agent and IP address are not stored.
+  deviceLabel   String                   @map("device_label") @db.VarChar(64)
+  createdAt     DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastSeenAt    DateTime                 @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  expiresAt     DateTime                 @map("expires_at") @db.Timestamptz(3)
+  revokedAt     DateTime?                @map("revoked_at") @db.Timestamptz(3)
+  revokedReason SessionRevocationReason? @map("revoked_reason")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@map("sessions")
+}
+
+model EmailVerificationToken {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  tokenHash  String    @unique @map("token_hash") @db.Char(64)
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
+model PasswordResetToken {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  tokenHash  String    @unique @map("token_hash") @db.Char(64)
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }

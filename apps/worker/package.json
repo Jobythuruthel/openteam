@@ -8,11 +8,13 @@
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run --exclude \"test/**\"",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@openteam/config": "workspace:*",
     "@openteam/database": "workspace:*",
+    "@openteam/email": "workspace:*",
     "bullmq": "5.81.5",
     "ioredis": "5.11.1",
     "pino": "10.4.0"

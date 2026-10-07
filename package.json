@@ -18,7 +18,8 @@
     "test:integration": "pnpm -r run test:integration",
     "db:generate": "pnpm --filter @openteam/database run generate",
     "db:migrate": "pnpm --filter @openteam/database run migrate:deploy",
-    "db:migrate:dev": "pnpm --filter @openteam/database run migrate:dev"
+    "db:migrate:dev": "pnpm --filter @openteam/database run migrate:dev",
+    "test:e2e": "pnpm --filter @openteam/web run test:e2e"
   },
   "devDependencies": {
     "@openteam/eslint-config": "workspace:*",
@@ -35,7 +36,8 @@
       "esbuild",
       "sharp",
       "msgpackr-extract",
-      "unrs-resolver"
+      "unrs-resolver",
+      "argon2"
     ]
   }
 }

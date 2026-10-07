@@ -17,11 +17,16 @@
     "@nestjs/platform-express": "11.2.7",
     "@openteam/config": "workspace:*",
     "@openteam/database": "workspace:*",
+    "@openteam/email": "workspace:*",
+    "@openteam/validation": "workspace:*",
+    "argon2": "0.45.1",
+    "bullmq": "5.81.5",
     "ioredis": "5.11.1",
     "pino": "10.4.0",
     "pino-http": "11.0.0",
     "reflect-metadata": "0.2.2",
-    "rxjs": "7.8.2"
+    "rxjs": "7.8.2",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@nestjs/testing": "11.2.7",

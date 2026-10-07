@@ -58,7 +58,44 @@ describe('loadApiEnv', () => {
   });
 });
 
+describe('auth settings', () => {
+  it('defaults to sane session and token lifetimes', () => {
+    const env = loadApiEnv(valid);
+    expect(env.SESSION_TTL_DAYS).toBe(30);
+    expect(env.SESSION_IDLE_TIMEOUT_DAYS).toBe(14);
+    expect(env.EMAIL_VERIFICATION_TTL_HOURS).toBe(24);
+    expect(env.PASSWORD_RESET_TTL_MINUTES).toBe(60);
+    expect(env.COOKIE_SECURE).toBe(false);
+  });
+
+  it('refuses insecure cookies in production', () => {
+    expect(() => loadApiEnv({ ...valid, NODE_ENV: 'production' })).toThrow(/COOKIE_SECURE/);
+    expect(
+      loadApiEnv({ ...valid, NODE_ENV: 'production', COOKIE_SECURE: 'true' }).COOKIE_SECURE,
+    ).toBe(true);
+  });
+
+  it('refuses an idle timeout longer than the session lifetime', () => {
+    expect(() =>
+      loadApiEnv({ ...valid, SESSION_TTL_DAYS: '7', SESSION_IDLE_TIMEOUT_DAYS: '14' }),
+    ).toThrow(/SESSION_IDLE_TIMEOUT_DAYS/);
+  });
+});
+
 describe('loadWorkerEnv', () => {
+  it('defaults email delivery to local Mailpit', () => {
+    const env = loadWorkerEnv(valid);
+    expect(env.EMAIL_PROVIDER).toBe('smtp');
+    expect(env.SMTP_HOST).toBe('localhost');
+    expect(env.SMTP_PORT).toBe(1025);
+  });
+
+  it('rejects unknown email providers', () => {
+    expect(() => loadWorkerEnv({ ...valid, EMAIL_PROVIDER: 'carrier-pigeon' })).toThrow(
+      /EMAIL_PROVIDER/,
+    );
+  });
+
   it('validates concurrency bounds', () => {
     expect(loadWorkerEnv(valid).WORKER_CONCURRENCY).toBe(4);
     expect(() => loadWorkerEnv({ ...valid, WORKER_CONCURRENCY: '0' })).toThrow(

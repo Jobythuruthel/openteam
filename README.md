@@ -4,7 +4,7 @@ Open Team ([openteam.me](https://openteam.me)) is a free, open-source community,
 
 Core community features stay free. There is no paid verification and no pay-to-win visibility. The whole system can be self-hosted.
 
-> Status: early development. The repository foundation is in place. Product features land one vertical slice at a time, starting with authentication. See [docs/roadmap.md](docs/roadmap.md).
+> Status: early development. The foundation and authentication are in place. Product features land one vertical slice at a time. See [docs/roadmap.md](docs/roadmap.md).
 
 ## Repository layout
 
@@ -21,7 +21,7 @@ Core community features stay free. There is no paid verification and no pay-to-w
 | `infrastructure/docker`      | Production Dockerfiles                         |
 | `docs`                       | Architecture notes and decision records        |
 
-More packages from the architecture plan (`ui`, `validation`, `types`, `permissions`, `analytics`, `testing`) get created when the first feature needs them, not before.
+More packages from the architecture plan (`ui`, `types`, `permissions`, `analytics`, `testing`) get created when the first feature needs them, not before.
 
 ## Quick start (development)
 
@@ -29,26 +29,27 @@ Requirements: Node.js 22.12 or newer, pnpm 10 (`corepack enable`), Docker with C
 
 ```bash
 cp .env.example .env              # then set POSTGRES_PASSWORD and DATABASE_URL to match
-docker compose up -d postgres redis
+docker compose up -d postgres redis mailpit
 pnpm install
 pnpm build                        # builds shared packages the apps import
 pnpm db:migrate
 pnpm dev                          # api :4000, web :3000, cms :3001, worker
 ```
 
-Check the API: `curl http://localhost:4000/api/v1/health/ready`
+Check the API: `curl http://localhost:4000/api/v1/health/ready`. Emails sent in development appear in Mailpit at http://localhost:8025. Authentication is described in [docs/auth.md](docs/auth.md) and the API contract is served at `/api/v1/openapi.json`.
 
 ## Common commands
 
-| Command                 | Purpose                                                               |
-| ----------------------- | --------------------------------------------------------------------- |
-| `pnpm lint`             | ESLint across the monorepo, warnings fail                             |
-| `pnpm format:check`     | Prettier check                                                        |
-| `pnpm typecheck`        | Strict TypeScript in every workspace                                  |
-| `pnpm test`             | Unit and HTTP tests, no external services needed                      |
-| `pnpm test:integration` | Tests against real PostgreSQL and Redis (`DATABASE_URL`, `REDIS_URL`) |
-| `pnpm db:migrate:dev`   | Create a new migration after editing `schema.prisma`                  |
-| `pnpm db:migrate`       | Apply pending migrations                                              |
+| Command                 | Purpose                                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------------------- |
+| `pnpm lint`             | ESLint across the monorepo, warnings fail                                                     |
+| `pnpm format:check`     | Prettier check                                                                                |
+| `pnpm typecheck`        | Strict TypeScript in every workspace                                                          |
+| `pnpm test`             | Unit and HTTP tests, no external services needed                                              |
+| `pnpm test:integration` | Tests against real PostgreSQL, Redis and Mailpit (`DATABASE_URL`, `REDIS_URL`, `MAILPIT_URL`) |
+| `pnpm test:e2e`         | Playwright browser tests against the built stack (same services)                              |
+| `pnpm db:migrate:dev`   | Create a new migration after editing `schema.prisma`                                          |
+| `pnpm db:migrate`       | Apply pending migrations                                                                      |
 
 ## Running the full stack in containers
 
