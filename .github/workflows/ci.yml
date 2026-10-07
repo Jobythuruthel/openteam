@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, typecheck, unit tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm build
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  integration:
+    name: Migrations and integration tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: openteam
+          POSTGRES_PASSWORD: openteam
+          POSTGRES_DB: openteam
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U openteam" --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://openteam:openteam@localhost:5432/openteam
+      REDIS_URL: redis://localhost:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Apply migrations
+        run: pnpm db:migrate
+      - name: Create a shadow database for drift detection
+        run: psql postgresql://openteam:openteam@localhost:5432/openteam -c 'CREATE DATABASE openteam_shadow'
+      - name: Check the schema matches the migrations
+        working-directory: packages/database
+        run: >-
+          pnpm exec prisma migrate diff --from-migrations prisma/migrations
+          --to-schema-datamodel prisma/schema.prisma
+          --shadow-database-url postgresql://openteam:openteam@localhost:5432/openteam_shadow --exit-code
+      - run: pnpm test:integration
+
+  docker:
+    name: Build container images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build node images
+        run: |
+          for target in api worker migrate; do
+            docker build -f infrastructure/docker/node.Dockerfile --target "$target" -t "openteam-$target:ci" .
+          done
+      - name: Build Next.js images
+        run: |
+          for app in web cms; do
+            docker build -f infrastructure/docker/next.Dockerfile --build-arg APP="$app" -t "openteam-$app:ci" .
+          done
+
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high

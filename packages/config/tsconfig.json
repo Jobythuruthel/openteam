@@ -1,0 +1,11 @@
+{
+  "extends": "@openteam/typescript-config/base.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node10",
+    "rootDir": ".",
+    "outDir": "dist",
+    "types": ["node"]
+  },
+  "include": ["src"]
+}

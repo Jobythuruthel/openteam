@@ -1,0 +1,26 @@
+// Open Team database schema.
+// Every schema change ships as a migration in prisma/migrations. Never edit an applied migration.
+// Conventions: UUID primary keys, timestamptz in UTC, explicit status enums, foreign keys with
+// indexes, soft deletion only where recovery is a product requirement.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [citext, pgcrypto]
+}
+
+// Domain models arrive with their feature runs (authentication is next).
+// This placeholder model exists only because Prisma requires at least one model to generate a client;
+// it maps to a real table holding the schema metadata used by readiness checks.
+model SystemInfo {
+  key       String   @id @db.VarChar(64)
+  value     String   @db.Text
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("system_info")
+}

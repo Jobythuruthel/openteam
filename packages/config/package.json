@@ -1,0 +1,21 @@
+{
+  "name": "@openteam/config",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@openteam/typescript-config": "workspace:*",
+    "@types/node": "22.20.5",
+    "vitest": "3.2.7"
+  }
+}
